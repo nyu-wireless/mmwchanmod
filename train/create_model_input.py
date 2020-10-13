@@ -508,7 +508,7 @@ parser.add_argument(\
     help='directory of input CSV files')
 parser.add_argument(\
     '--model_dir',action='store',\
-    default='model_input', help='directory of output train-test files which'\
+    default='../../models/model_input', help='directory of output train-test files which'\
         +' are the input to the training')
    
 

@@ -55,7 +55,7 @@ parser.add_argument('--nunits_link',action='store',nargs='+',\
     default=[50,25],type=int,\
     help='num hidden units for the link state predictor')        
 parser.add_argument('--model_dir',action='store',\
-    default='model_data_tokyo_beijing', help='directory to store models')
+    default='..\models\model_data_london_moscow', help='directory to store models')
 parser.add_argument('--no_fit_link', dest='no_fit_link', action='store_true',\
     help="Does not fit the link model")
 parser.add_argument('--no_fit_path', dest='no_fit_path', action='store_true',\
@@ -66,10 +66,10 @@ parser.add_argument('--batch_ind',action='store',default=-1,type=int,\
     help='batch index.  -1 indicates no batch index')  
 parser.add_argument(\
     '--data_dir',action='store',\
-    default='model_input', help='directory of the data file')
+    default='../models/model_input', help='directory of the data file')
 parser.add_argument(\
     '--data_fn',action='store',\
-    default='data_set_tokyo_beijing.p', help='data file within the data directory')
+    default='data_set_london_moscow.p', help='data file within the data directory')
     
 
 args = parser.parse_args()
@@ -95,12 +95,16 @@ data_fn = args.data_fn
 # Overwrite parameters based on batch index
 # This is used in HPC training with multiple batches
 #lr_batch = [1e-3,1e-3,1e-3,1e-4,1e-4,1e-4]
-nlatent_batch = [10,10,10,20]
-nunits_enc_batch = [[50,20], [100,40], [200,80], [200,80]]
-nunits_dec_batch = [[20,50], [40,100], [80,200], [80,200]]
-dir_suffix = ['nl10_nu50', 'nl10_nu100', 'nl10_nu200', 'nl20_nu200']    
+nlatent_batch  = [20,30,40]
+nunits_enc_batch = [[200,80], [300,100], [300,200,100]]
+nunits_dec_batch = [[80,200], [100,300], [100,200,300]]
+dir_suffix = ['nl20_nh2', 'nl30_nh2', 'nl40_nh3']    
 if batch_ind >= 0:
-    model_dir = ('/scratch/sr663/models_20200726/model_data_%s' % dir_suffix[batch_ind])
+    if data_fn == 'data_set_tokyo_beijing.p':
+        ds_str = 'tb'
+    else:
+        ds_str = 'lm'
+    model_dir = ('../models/model_data_%s_%s' % (ds_str, dir_suffix[batch_ind]) )
     #lr_path = lr_batch[batch_ind]
     nlatent = nlatent_batch[batch_ind]
     nunits_enc = nunits_enc_batch[batch_ind]
@@ -111,6 +115,7 @@ if batch_ind >= 0:
     print('nunits_dec=%s' % str(nunits_dec))
     #print('lr=%12.4e' % lr_path)
     print('nlatent=%d' % nlatent)
+    print('data_fn=%s' % data_fn)
     
 
 """
@@ -127,7 +132,7 @@ K.clear_session()
 # Construct the channel model object
 chan_mod = ChanMod(nlatent=nlatent,cfg=cfg,\
                    nunits_enc=nunits_enc, nunits_dec=nunits_dec,\
-                   nunits_link=nunits_link, add_zero_los_frac=0.1,\
+                   nunits_link=nunits_link,\
                    out_var_min=out_var_min,\
                    init_bias_stddev=init_stddev,\
                    init_kernel_stddev=init_stddev, model_dir=model_dir)

@@ -246,7 +246,7 @@ class ChanMod(object):
     """    
     def __init__(self, cfg=None, nlatent=10,\
                  nunits_enc=(200,80), nunits_dec=(80,200), \
-                 nunits_link=(25,10), add_zero_los_frac=0.25,out_var_min=1e-4,\
+                 nunits_link=(25,10), add_zero_los_frac=0.1,out_var_min=1e-4,\
                  init_bias_stddev=10.0, init_kernel_stddev=10.0,\
                  model_dir='model_data'):
         """
