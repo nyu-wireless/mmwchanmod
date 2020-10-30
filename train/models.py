@@ -1065,7 +1065,7 @@ class ChanMod(object):
         return los_pl, los_ang, los_dly
         
     
-    def sample_path(self, dvec, rx_type, link_state=None):
+    def sample_path(self, dvec, rx_type, link_state=None, return_dict=False):
         """
         Generates random samples of the path data using the trained model
 
@@ -1078,16 +1078,18 @@ class ChanMod(object):
         link_state:  (nlink,) array of {no_link, los_link, nlos_link}            
             A value of `None` indicates that the link state should be
             generated randomly from the link state predictor model
+        return_dict:  boolean, default False
+            If set, it will return a dictionary with all the values
+            Otherwise it will return a channel list
    
         Returns
         -------
-        pl : (nlink,npaths_max) array 
-            Path losses of each path in each link.
-            A value of pl_max indicates no path
-        ang: (nlink,npaths_max,DataFormat.nangle) array
-            Angles of each pathin each link
-        dly : (nlink,npaths_max) array 
-            Absolute delay of each path in each link in seconds.           
+        chan_list:  (nlink,) list of MPChan object
+            List of random channels from the model.  Returned if
+            return_dict == False
+        data:  dictionary
+            Dictionary in the same format as the data.
+            Returned if return_dict==True
         """
         # Get dimensions
         nlink = dvec.shape[0]
@@ -1142,6 +1144,8 @@ class ChanMod(object):
         
         # Store in a data dictionary
         data = dict()
+        data['dvec'] = dvec
+        data['rx_type'] = rx_type
         data['link_state'] = link_state
         data['nlos_pl'] = nlos_pl
         data['nlos_dly'] = nlos_dly
@@ -1149,6 +1153,10 @@ class ChanMod(object):
         data['los_pl'] = los_pl
         data['los_dly'] = los_dly
         data['los_ang'] = los_ang
+        
+        if return_dict:
+            return data
+        
         
         # Config
         cfg = DataConfig()

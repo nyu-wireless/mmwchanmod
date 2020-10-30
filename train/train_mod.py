@@ -92,6 +92,14 @@ checkpoint_period = args.checkpoint_period
 data_dir = args.data_dir
 data_fn = args.data_fn
 
+nlatent = 30
+nunits_enc = [300,100]
+nunits_dec = [300,100]
+nepochs_path = 3000
+data_fn = 'data_set_tokyo_beijing.p'
+model_dir = '../models/model_tb_20201014_nl30'
+nepochs_path = 5
+
 # Overwrite parameters based on batch index
 # This is used in HPC training with multiple batches
 #lr_batch = [1e-3,1e-3,1e-3,1e-4,1e-4,1e-4]

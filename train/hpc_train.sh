@@ -8,6 +8,8 @@
 #SBATCH --mail-type=END
 #SBATCH --mail-user=123@abc.xyz
 #SBATCH --output=slurm_%A_%a.out
+#SBATCH --array=0-3
+
 
 module load python3/intel/3.7.3
-python3 train_mod.py --nepochs_path 2000  --model_dir model_data
+python3 train_mod.py --nepochs_path 2000  --model_dir model_data   --batch_ind $SLURM_ARRAY_TASK_ID
