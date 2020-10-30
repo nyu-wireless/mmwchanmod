@@ -218,7 +218,7 @@ class RotatedArray(ArrayBase):
         
         # Note the conversion from elevation to inclination
         phi1, theta1 = spherical_add_sub(\
-                self.phi0,90-self.theta0,phi,90-theta,sub=True)   
+                phi,90-theta,self.phi0,90-self.theta0,sub=True)   
         return phi1, theta1
         
         
