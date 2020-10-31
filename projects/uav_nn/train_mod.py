@@ -18,12 +18,12 @@ import tensorflow.keras.backend as K
 import argparse
 
 
-path = os.path.abspath('..')
+path = os.path.abspath('../..')
 if not path in sys.path:
     sys.path.append(path)
     
-from sim.chanmod import LinkState
-from train.models import DataConfig, ChanMod
+from mmwchanmod.common.constants import LinkState, DataConfig
+from mmwchanmod.learn.models import ChanMod
 
 """
 Parse arguments from command line
@@ -55,7 +55,7 @@ parser.add_argument('--nunits_link',action='store',nargs='+',\
     default=[50,25],type=int,\
     help='num hidden units for the link state predictor')        
 parser.add_argument('--model_dir',action='store',\
-    default='..\models\model_data_london_moscow', help='directory to store models')
+    default= '../../models/uav_boston', help='directory to store models')
 parser.add_argument('--no_fit_link', dest='no_fit_link', action='store_true',\
     help="Does not fit the link model")
 parser.add_argument('--no_fit_path', dest='no_fit_path', action='store_true',\
@@ -66,10 +66,10 @@ parser.add_argument('--batch_ind',action='store',default=-1,type=int,\
     help='batch index.  -1 indicates no batch index')  
 parser.add_argument(\
     '--data_dir',action='store',\
-    default='../models/model_input', help='directory of the data file')
+    default='../../data', help='directory of the data file')
 parser.add_argument(\
     '--data_fn',action='store',\
-    default='data_set_london_moscow.p', help='data file within the data directory')
+    default='uav_boston.p', help='data file within the data directory')
     
 
 args = parser.parse_args()
@@ -92,13 +92,6 @@ checkpoint_period = args.checkpoint_period
 data_dir = args.data_dir
 data_fn = args.data_fn
 
-nlatent = 30
-nunits_enc = [300,100]
-nunits_dec = [300,100]
-nepochs_path = 3000
-data_fn = 'data_set_tokyo_beijing.p'
-model_dir = '../models/model_tb_20201014_nl30'
-nepochs_path = 5
 
 # Overwrite parameters based on batch index
 # This is used in HPC training with multiple batches
@@ -106,17 +99,18 @@ nepochs_path = 5
 nlatent_batch  = [20,30,40]
 nunits_enc_batch = [[200,80], [300,100], [300,200,100]]
 nunits_dec_batch = [[80,200], [100,300], [100,200,300]]
+city_batch = ['boston', 'london']
 dir_suffix = ['nl20_nh2', 'nl30_nh2', 'nl40_nh3']    
 if batch_ind >= 0:
-    if data_fn == 'data_set_tokyo_beijing.p':
-        ds_str = 'tb'
-    else:
-        ds_str = 'lm'
-    model_dir = ('../models/model_data_%s_%s' % (ds_str, dir_suffix[batch_ind]) )
+    nparam = len(nlatent_batch)
+    icity = batch_ind // nparam
+    iparam = batch_ind % nparam
+    data_fn = 'uav_%s.p' % city_batch[icity]
+    model_dir = ('../../models/uav_%s_%s' % (city_batch[icity], dir_suffix[iparam]) )
     #lr_path = lr_batch[batch_ind]
-    nlatent = nlatent_batch[batch_ind]
-    nunits_enc = nunits_enc_batch[batch_ind]
-    nunits_dec = nunits_dec_batch[batch_ind]
+    nlatent = nlatent_batch[iparam]
+    nunits_enc = nunits_enc_batch[iparam]
+    nunits_dec = nunits_dec_batch[iparam]
     print('batch_ind=%d' % batch_ind)
     print('model_dir= %s' % model_dir)
     print('nunits_enc=%s' % str(nunits_enc))
@@ -125,7 +119,6 @@ if batch_ind >= 0:
     print('nlatent=%d' % nlatent)
     print('data_fn=%s' % data_fn)
     
-
 """
 Build the model
 """

@@ -4,7 +4,7 @@ array.py:  Classes for modeling antenna arrays
 import numpy as np
 from mmwchanmod.common.constants import PhyConst
 from mmwchanmod.common.spherical import sph_to_cart, spherical_add_sub
-from mmwchanmod.sim.antenna import plot_pattern
+from mmwchanmod.sim.antenna import plot_pattern, ElemIsotropic
 
 
 class ArrayBase(object):
@@ -26,7 +26,7 @@ class ArrayBase(object):
             Frequency in Hz.  Used for narrowband response
         """
         if elem is None:
-            self.elem = sim.antenna.ElemIsotropic()
+            self.elem = ElemIsotropic()
         else:
             self.elem = elem
         self.elem_pos = elem_pos
