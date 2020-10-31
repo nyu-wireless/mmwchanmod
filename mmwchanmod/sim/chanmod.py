@@ -4,15 +4,7 @@ chanmod.py:  Methods for modeling multi-path channels
 
 import numpy as np
 
-class LinkState(object):
-    """
-    Static class with link states
-    """
-    no_link = 0
-    los_link = 1
-    nlos_link = 2
-    nlink_state = 3
-    
+from mmwchanmod.common.constants import LinkState    
     
 class MPChan(object):
     """

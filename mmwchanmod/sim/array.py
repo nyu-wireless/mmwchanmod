@@ -2,10 +2,9 @@
 array.py:  Classes for modeling antenna arrays
 """
 import numpy as np
-import sim.antenna
-from common.phyconsts import PhyConst
-from common.spherical import sph_to_cart, spherical_add_sub
-from sim.antenna import plot_pattern
+from mmwchanmod.common.constants import PhyConst
+from mmwchanmod.common.spherical import sph_to_cart, spherical_add_sub
+from mmwchanmod.sim.antenna import plot_pattern
 
 
 class ArrayBase(object):

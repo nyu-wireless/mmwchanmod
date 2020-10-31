@@ -1,5 +1,5 @@
 """
-create_data.py:  Creates train and test data for the channel modeling
+create_dataset.py:  Creates train and test dataset for the channel modeling
 """
 import pandas as pd
 import os
@@ -8,13 +8,15 @@ import matplotlib.pyplot as plt
 import pickle
 import sys
 import argparse
+from datetime import date
 
 path = os.path.abspath('..')
 if not path in sys.path:
     sys.path.append(path)
     
-from sim.chanmod import LinkState
-from train.models import DataConfig
+    
+from mmwchanmod.sim.chanmod import LinkState
+from mmwchanmod.learn.models import DataConfig
 
 
 class DataSet(object):
@@ -24,7 +26,8 @@ class DataSet(object):
     def __init__(self):
         self.folders = []
         self.train_test_split = False
-        self.test_size = 0        
+        self.test_size = 0  
+        self.desc = 'data set'
 
 
 class ConfigReader(object):
@@ -67,6 +70,15 @@ class ConfigReader(object):
             raise ValueError('Expecting at least one argument after %s' % words[0])
         return words[1:]
     
+    def read_string_joined(self,words):
+        """
+        Reads a list of strings and joins them to a single string
+        """
+        if len(words) < 2:
+            raise ValueError('Expecting at least one argument after %s' % words[0])
+        sep = ' '
+        return sep.join(words[1:])
+    
     def read_data_set(self, data_sets, words):
         """
         Reads a list of folders for a new data group
@@ -96,6 +108,8 @@ class ConfigReader(object):
         cfg = DataConfig()
         data_sets = dict()
         
+        # Set the date
+        cfg.date_created = date.today().strftime("%d-%m-%Y")        
             
         # Loop over lines
         line_num = 0
@@ -131,7 +145,10 @@ class ConfigReader(object):
                     if (ds is None):
                         raise ValueError('Keyword test_size before data_set')
                     ds.test_size = self.read_float(words)
-                    ds.train_test_split = True    
+                    ds.train_test_split = True 
+                elif words[0] == 'desc':
+                    ds.desc = self.read_string_joined(words)
+                    
                 else:
                     raise ValueError('Unknown keyword %s' % words[0])
             except ValueError as err:
@@ -508,7 +525,7 @@ parser.add_argument(\
     help='directory of input CSV files')
 parser.add_argument(\
     '--model_dir',action='store',\
-    default='../../models/model_input', help='directory of output train-test files which'\
+    default='../../data', help='directory of output train-test files which'\
         +' are the input to the training')
    
 
@@ -549,10 +566,9 @@ for ds_name in data_sets:
         print('Data set %s:  No CSV files found' % ds_name)
         continue
     
- 
-            
+     
     # Output file path
-    out_fn = 'data_set_%s.p' % ds_name
+    out_fn = '%s.p' % ds_name
     out_fn = os.path.join(model_dir, out_fn)
                  
                   
@@ -581,6 +597,7 @@ for ds_name in data_sets:
         
         
     # Save results
+    cfg.desc = ds.desc
     with open(out_fn, 'wb') as fp:
         pickle.dump([cfg, train_data, test_data], fp)            
     print('Data set written to %s' % out_fn)

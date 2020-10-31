@@ -13,44 +13,11 @@ import pickle
 from tensorflow.keras.optimizers import Adam
 import os
 
-from sim.chanmod import LinkState, MPChan
-from common.spherical import spherical_add_sub, cart_to_sph
-
-class PhyConst(object):
-    """
-    Physical constants
-    """
-    light_speed = 2.99792458e8
-    
-
-class DataFormat(object):
-    """
-    Constants for data format
-    """
-    
-    # Indices for the angle data
-    aoa_phi_ind = 0
-    aoa_theta_ind = 1
-    aod_phi_ind = 2
-    aod_theta_ind = 3
-    nangle = 4
-    ang_name = ['AoA_Phi', 'AoA_theta', 'AoD_phi', 'AoD_theta']
-    
-    # Maximum number of paths
-    npaths_max = 25
-
-    
-class DataConfig(object):
-    """
-    Meta data on ray tracing data
-    """
-    def __init__(self):
-        self.fc = 28e9
-        self.name = 'data'
-        self.rx_types = ['RX0']
-        self.pl_max = 200
-        self.tx_pow_dbm = 16
-        self.npaths_max = 20       
+from mmwchanmod.sim.chanmod import MPChan
+from mmwchanmod.common.spherical import spherical_add_sub, cart_to_sph
+from mmwchanmod.common.constants import PhyConst, AngleFormat
+from mmwchanmod.common.constants import LinkState, DataConfig 
+from mmwchanmod.learn.datastats import  data_to_mpchan 
     
 
 class CondVAE(object):
@@ -579,7 +546,7 @@ class ChanMod(object):
         # * nangle angles
         # * one delay
         # for a total of (2+nangle)*npaths_max parameters
-        self.ndat = self.npaths_max*(2+DataFormat.nangle)
+        self.ndat = self.npaths_max*(2+AngleFormat.nangle)
         
         # Number of condition variables
         #   * d3d
@@ -767,10 +734,10 @@ class ChanMod(object):
         r, los_aoa_phi, los_aoa_theta = cart_to_sph(-dvec)
         
         # Get the NLOS angles
-        nlos_aod_phi   = nlos_ang[:,:,DataFormat.aod_phi_ind]
-        nlos_aod_theta = nlos_ang[:,:,DataFormat.aod_theta_ind]
-        nlos_aoa_phi   = nlos_ang[:,:,DataFormat.aoa_phi_ind]
-        nlos_aoa_theta = nlos_ang[:,:,DataFormat.aoa_theta_ind]
+        nlos_aod_phi   = nlos_ang[:,:,AngleFormat.aod_phi_ind]
+        nlos_aod_theta = nlos_ang[:,:,AngleFormat.aod_theta_ind]
+        nlos_aoa_phi   = nlos_ang[:,:,AngleFormat.aoa_phi_ind]
+        nlos_aoa_theta = nlos_ang[:,:,AngleFormat.aoa_theta_ind]
         
         # Rotate the NLOS angles by the LOS angles to compute
         # the relative angle        
@@ -836,11 +803,11 @@ class ChanMod(object):
             
         # Stack the relative angles     
         nlink = nlos_aod_phi.shape[0]
-        nlos_ang = np.zeros((nlink,self.npaths_max,DataFormat.nangle))
-        nlos_ang[:,:,DataFormat.aoa_phi_ind] = nlos_aoa_phi
-        nlos_ang[:,:,DataFormat.aoa_theta_ind] = nlos_aoa_theta
-        nlos_ang[:,:,DataFormat.aod_phi_ind] = nlos_aod_phi
-        nlos_ang[:,:,DataFormat.aod_theta_ind] = nlos_aod_theta
+        nlos_ang = np.zeros((nlink,self.npaths_max,AngleFormat.nangle))
+        nlos_ang[:,:,AngleFormat.aoa_phi_ind] = nlos_aoa_phi
+        nlos_ang[:,:,AngleFormat.aoa_theta_ind] = nlos_aoa_theta
+        nlos_ang[:,:,AngleFormat.aod_phi_ind] = nlos_aod_phi
+        nlos_ang[:,:,AngleFormat.aod_theta_ind] = nlos_aod_theta
         
         return nlos_ang
                     
@@ -1017,8 +984,8 @@ class ChanMod(object):
         
         # Split
         Xpl = X[:,:self.npaths_max]
-        Xang = X[:,self.npaths_max:self.npaths_max*(DataFormat.nangle+1)]
-        Xdly = X[:,self.npaths_max*(DataFormat.nangle+1):]
+        Xang = X[:,self.npaths_max:self.npaths_max*(AngleFormat.nangle+1)]
+        Xdly = X[:,self.npaths_max*(AngleFormat.nangle+1):]
         
         # Invert the transforms
         nlos_pl = self.inv_transform_pl(Xpl)
@@ -1041,7 +1008,7 @@ class ChanMod(object):
         -------
         los_pl:  (n,) array
             LOS path losses computed from Friis' Law
-        los_ang:  (n,DataFormat.nangle) = (n,4) array
+        los_ang:  (n,AngleFormat.nangle) = (n,4) array
             LOS angles 
         los_dly:  (n,) array
             Delay of the paths computed from the speed of light
@@ -1125,7 +1092,7 @@ class ChanMod(object):
         
         # Create arrays for the NLOS paths
         nlos_pl  = np.tile(self.pl_max, (nlink,self.npaths_max)).astype(np.float32)
-        nlos_ang = np.zeros((nlink,self.npaths_max,DataFormat.nangle), dtype=np.float32)
+        nlos_ang = np.zeros((nlink,self.npaths_max,AngleFormat.nangle), dtype=np.float32)
         nlos_dly  = np.zeros((nlink,self.npaths_max), dtype=np.float32)
         nlos_pl[Ilink]  = nlos_pl1
         nlos_ang[Ilink] = nlos_ang1
@@ -1136,7 +1103,7 @@ class ChanMod(object):
         
         # Create arrays for the LOS paths
         los_pl  = np.zeros((nlink,), dtype=np.float32)
-        los_ang = np.zeros((nlink,DataFormat.nangle), dtype=np.float32)
+        los_ang = np.zeros((nlink,AngleFormat.nangle), dtype=np.float32)
         los_dly  = np.zeros((nlink,), dtype=np.float32)
         los_pl[Ilos]  = los_pl1
         los_ang[Ilos] = los_ang1
@@ -1236,62 +1203,6 @@ def set_initialization(mod, layer_names, kernel_stddev=1.0, bias_stddev=1.0):
                              (nout,)).astype(np.float32)
         layer.set_weights([W,b])
     
-def data_to_mpchan(data, cfg):
-    """
-    Converts a data dictionary to a list of MPChan
-    
-    Parameters
-    ----------
-    data:  Dictionary
-        Dictionary with lists of items for each channel
-    cfg: DataConfig
-        Data configuration 
-        
-    Returns
-    -------
-    chan_list:  List of MPChan objects
-        One object for each channel
-    link_state:  np.array of ints
-        Links states for each link.  This may be different than the
-        data['link_state'] since occassionally some paths will be
-        truncated.
-    """
-    
-    
-    # Copy the NLOS path losses and angles
-    pl = np.copy(data['nlos_pl'])
-    ang = np.copy(data['nlos_ang'])
-    dly = np.copy(data['nlos_dly'])
-    
-    # On the links with LOS paths, move over the
-    # the NLOS data and insert the NLOS paths
-    Ilos = np.where(data['link_state'] == LinkState.los_link)
-    pl[Ilos,1:] = pl[Ilos,:-1]
-    ang[Ilos,1:,:] = ang[Ilos,:-1,:]
-    dly[Ilos,1:] = dly[Ilos,:-1]
-    
-    pl[Ilos,0] = data['los_pl'][Ilos]
-    ang[Ilos,0,:] = data['los_ang'][Ilos,:]
-    dly[Ilos,0] = data['los_dly'][Ilos]
-    
-    # Loop over the channels and convert each to a MP channel structure
-    chan_list = []
-    n = pl.shape[0]
-    
-    link_state = data['link_state']
-    
-    for i in range(n):
-        chan = MPChan()
-        npath = np.sum(pl[i,:] < cfg.pl_max-0.1)
-        if (npath > 0):
-            chan.dly = dly[i,:npath]
-            chan.ang = ang[i,:npath,:]
-            chan.pl  = pl[i,:npath]
-            chan.link_state = data['link_state'][i]
-        else:
-            link_state[i] = LinkState.no_link
-        chan_list.append(chan)
-        
-    return chan_list, link_state
+
             
 
