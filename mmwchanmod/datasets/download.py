@@ -83,7 +83,7 @@ def list_datasets(prt=True):
     return ds_names
     
                   
-def get_dataset(ds_name, overwrite=False):
+def get_dataset(ds_name, overwrite=False, return_data=True):
     """
     Gets a dataset
 
@@ -93,6 +93,10 @@ def get_dataset(ds_name, overwrite=False):
         Dataset to be downloaded. 
     overwrite : boolean, default: False
         Overwrites dataset if already downloaded
+    return_data : boolean, default: True
+        Returns the data dictionary.  If False, the file
+        is only downloaded.
+        
         
     Returns
     -------
@@ -121,6 +125,12 @@ def get_dataset(ds_name, overwrite=False):
         
         # Download the file
         download_file_from_gdrive(gdrive_id, ds_path)
+    elif not return_data:
+        print('Data file %s already available' % ds_path)
+    
+    # Exit if data does not need to be returned
+    if not return_data:
+        return
         
     # Load the pickle file
     with open(ds_path, 'rb') as fp:

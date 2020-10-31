@@ -8,7 +8,9 @@ path = os.path.abspath('../..')
 if not path in sys.path:
     sys.path.append(path)
     
-from mmwchanmod.datasets.donwload import get_dataset
+from mmwchanmod.datasets.download import get_dataset
 
-get_dataset('uav_boston')
-get_dataset('uav_london')
+datasets = ['uav_boston', 'uav_london', 'uav_moscow']
+
+for ds in datasets:
+    get_dataset(ds, return_data=False)
