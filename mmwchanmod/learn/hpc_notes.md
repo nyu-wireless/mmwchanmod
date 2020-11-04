@@ -19,12 +19,13 @@ Before beginning, you will need an account on NYU's HPC cluster.  Follow the [in
 *  The first time you log in, you will also need to install `sklearn` and `tensorflow`:
     ```
         pip3 install --upgrade --user sklearn
+        pip3 install --upgrade --user tqdm
         pip3 install --upgrade --user tensorflow       
     ```
     Note that earlier versions of tensorflow had separate GPU and CPU versions.  This is no longer necessary.  The `--user` option is needed to provide you the permissions.
 * If you are running on a GPU, you will need to install the CUDA drivers (these commands also need to be run every time you log in).  First find the latest version with `cudnn` drivers with `module avail cudnn`.  Assuming the latest driver is:   `cudnn/10.1v7.6.5.32`
     ```
-        module load cudnn/10.0v7.6.5.32
+        module load cudnn/10.1v7.6.5.32
     ```
     Note that the networks in this project are small and a GPU will not offer any noticeable improvement in speed. 
 
