@@ -22,8 +22,8 @@ path = os.path.abspath('../..')
 if not path in sys.path:
     sys.path.append(path)
     
-from mmwchanmod.common.constants import LinkState, DataConfig
 from mmwchanmod.learn.models import ChanMod
+from mmwchanmod.datasets.download import get_dataset
 
 """
 Parse arguments from command line
@@ -68,8 +68,8 @@ parser.add_argument(\
     '--data_dir',action='store',\
     default='../../data', help='directory of the data file')
 parser.add_argument(\
-    '--data_fn',action='store',\
-    default='uav_boston.p', help='data file within the data directory')
+    '--ds_name',action='store',\
+    default='uav_lon_tok', help='dataset within the data directory')
     
 
 args = parser.parse_args()
@@ -90,7 +90,7 @@ fit_link = not args.no_fit_link
 fit_path = not args.no_fit_path
 checkpoint_period = args.checkpoint_period
 data_dir = args.data_dir
-data_fn = args.data_fn
+ds_name = args.ds_name
 
 
 # Overwrite parameters based on batch index
@@ -99,13 +99,13 @@ data_fn = args.data_fn
 nlatent_batch  = [20,30,40]
 nunits_enc_batch = [[200,80], [300,100], [300,200,100]]
 nunits_dec_batch = [[80,200], [100,300], [100,200,300]]
-city_batch = ['boston', 'london']
+city_batch = ['uav_lon_tok', 'beijing']
 dir_suffix = ['nl20_nh2', 'nl30_nh2', 'nl40_nh3']    
 if batch_ind >= 0:
     nparam = len(nlatent_batch)
     icity = batch_ind // nparam
     iparam = batch_ind % nparam
-    data_fn = 'uav_%s.p' % city_batch[icity]
+    ds_name = 'uav_%s.p' % city_batch[icity]
     model_dir = ('../../models/uav_%s_%s' % (city_batch[icity], dir_suffix[iparam]) )
     #lr_path = lr_batch[batch_ind]
     nlatent = nlatent_batch[iparam]
@@ -117,27 +117,26 @@ if batch_ind >= 0:
     print('nunits_dec=%s' % str(nunits_dec))
     #print('lr=%12.4e' % lr_path)
     print('nlatent=%d' % nlatent)
-    print('data_fn=%s' % data_fn)
+    print('data_fn=%s' % ds_name)
     
 """
 Build the model
 """
 
 # Load the data
-data_path = os.path.join(data_dir, data_fn)
-with open(data_path, 'rb') as fp:
-    cfg, train_data, test_data = pickle.load(fp)
-
-K.clear_session()
+data = get_dataset(ds_name)
+cfg = data['cfg']
+train_data = data['train_data'] 
+test_data = data['test_data'] 
 
 # Construct the channel model object
+K.clear_session()
 chan_mod = ChanMod(nlatent=nlatent,cfg=cfg,\
                    nunits_enc=nunits_enc, nunits_dec=nunits_dec,\
                    nunits_link=nunits_link,\
                    out_var_min=out_var_min,\
                    init_bias_stddev=init_stddev,\
-                   init_kernel_stddev=init_stddev, model_dir=model_dir)
-    
+                   init_kernel_stddev=init_stddev, model_dir=model_dir)    
 chan_mod.save_config()
 
 """
