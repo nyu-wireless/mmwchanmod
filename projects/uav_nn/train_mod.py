@@ -37,7 +37,7 @@ parser.add_argument('--nepochs_link',action='store',default=10,type=int,\
     help='number of epochs for training the link model')
 parser.add_argument('--lr_link',action='store',default=1e-3,type=float,\
     help='learning rate for the link model')   
-parser.add_argument('--nepochs_path',action='store',default=500,type=int,\
+parser.add_argument('--nepochs_path',action='store',default=5000,type=int,\
     help='number of epochs for training the path model')
 parser.add_argument('--lr_path',action='store',default=1e-4,type=float,\
     help='learning rate for the path model')     
@@ -60,7 +60,7 @@ parser.add_argument('--no_fit_link', dest='no_fit_link', action='store_true',\
     help="Does not fit the link model")
 parser.add_argument('--no_fit_path', dest='no_fit_path', action='store_true',\
     help="Does not fit the path model")
-parser.add_argument('--checkpoint_period',action='store',default=100,type=int,\
+parser.add_argument('--checkpoint_period',action='store',default=500,type=int,\
     help='Period in epochs for storing checkpoint.  A value of 0 indicates no checkpoints')    
 parser.add_argument('--batch_ind',action='store',default=-1,type=int,\
     help='batch index.  -1 indicates no batch index')  
@@ -96,11 +96,11 @@ ds_name = args.ds_name
 # Overwrite parameters based on batch index
 # This is used in HPC training with multiple batches
 #lr_batch = [1e-3,1e-3,1e-3,1e-4,1e-4,1e-4]
-nlatent_batch  = [20,30,40]
-nunits_enc_batch = [[200,80], [300,100], [300,200,100]]
-nunits_dec_batch = [[80,200], [100,300], [100,200,300]]
-ds_name_batch = ['uav_lon_tok', 'uav_beijing']
-dir_suffix = ['nl20_nh2', 'nl30_nh2', 'nl40_nh3']    
+nlatent_batch  = [20,30]
+nunits_enc_batch = [[200,80], [300,100]]
+nunits_dec_batch = [[80,200], [100,300]]
+ds_name_batch = ['uav_lon_tok', 'uav_beijing', 'uav_boston', 'uav_moscow']
+dir_suffix = ['nl20_nh2_20201105', 'nl30_nh2_20201105']    
 if batch_ind >= 0:
     nparam = len(nlatent_batch)
     ids = batch_ind // nparam

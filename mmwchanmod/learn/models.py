@@ -529,6 +529,9 @@ class ChanMod(object):
         with open(preproc_path,'rb') as fp:
             self.link_scaler, self.nunits_link, self.rx_type_enc = pickle.load(fp)
             
+        # Update version
+        self.link_scaler = new_version_standard_scaler(self.link_scaler)
+            
         # Build the link state predictor
         self.build_link_mod()
         
@@ -1171,6 +1174,9 @@ class ChanMod(object):
             self.pl_scaler, self.cond_scaler, self.dly_scale, self.pl_max,\
                 self.npaths_max, self.nlatent, self.nunits_enc,\
                 self.nunits_dec = pickle.load(fp)
+                
+        # Update the version
+        self.cond_scaler = new_version_standard_scaler(self.cond_scaler)
             
         # Build the path model
         self.build_path_mod()
@@ -1202,6 +1208,45 @@ def set_initialization(mod, layer_names, kernel_stddev=1.0, bias_stddev=1.0):
         b = np.random.normal(0,bias_stddev,\
                              (nout,)).astype(np.float32)
         layer.set_weights([W,b])
+        
+def new_version_standard_scaler(scaler):
+    """
+    Creates a version of a StandardScaler object with the current
+    sklearn version.  This is used when deserializing (i.e. pickle.load) 
+    a scaler from an old version.
+
+    Parameters
+    ----------
+    scaler : StandardScaler object from an old version
+        Old version of the scaler.  Must have `mean_` and `scale_`
+        attributes.
+
+    Returns
+    -------
+    scaler_new : StandardScaler object
+        New version
+    """
+    
+    # Get mean and variance for the data
+    mean = scaler.mean_
+    scale = scaler.scale_
+    
+    
+    # Create ficticious data with that mean and scale
+    nsamp = 100
+    u = np.linspace(-1,1,nsamp)
+    u = u - np.mean(u)
+    u = u / np.std(u)    
+    X = mean[None,:] + u[:,None]*scale[None,:]
+    
+    
+    # Create a new scaler and fit it with the fake data to get 
+    # the same parameters as the old scaler
+    scaler_new =  sklearn.preprocessing.StandardScaler()
+    scaler_new.fit(X)
+            
+    return scaler_new
+
     
 
             
