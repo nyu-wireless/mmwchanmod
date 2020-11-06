@@ -567,7 +567,7 @@ class ChanMod(object):
             init_kernel_stddev=self.init_kernel_stddev)
             
     def fit_path_mod(self, train_data, test_data, epochs=50, lr=1e-3,\
-                     checkpoint_period = 0):
+                     checkpoint_period = 0, save_mod=True):
         """
         Trains the path model
 
@@ -584,6 +584,8 @@ class ChanMod(object):
         checkpoint_period:  int
             period in epochs for saving the model checkpoints.  
             A value of 0 indicates that checkpoints are not be saved.
+        save_mod:  boolean
+             Indicates if model is to be saved
         """      
         # Get the link state
         ls_tr = train_data['link_state']
@@ -615,6 +617,10 @@ class ChanMod(object):
             test_data['nlos_pl'][Its,:self.npaths_max],\
             test_data['nlos_ang'][Its,:self.npaths_max,:],\
             test_data['nlos_dly'][Its,:self.npaths_max])
+            
+        # Save the pre-processor
+        if save_mod:
+            self.save_path_preproc()
         
         # Create the checkpoint callback
         batch_size = 100
@@ -642,6 +648,10 @@ class ChanMod(object):
         hist_path = os.path.join(self.model_dir, 'path_train_hist.p')        
         with open(hist_path,'wb') as fp:
             pickle.dump(self.path_hist.history, fp)
+            
+        # Save the weights model
+        if save_mod:
+            self.save_path_model()            
             
     def transform_dly(self, dvec, nlos_dly, fit=False):
         """
@@ -1140,22 +1150,32 @@ class ChanMod(object):
         return chan_list, link_state
             
     
-    def save_path_model(self):
+    def save_path_preproc(self):
         """
-        Saves model data to files
-
+        Saves path preprocessor
         """
         # Create the file paths
         if not os.path.exists(self.model_dir):
             os.makedirs(self.model_dir)
         preproc_path = os.path.join(self.model_dir, self.path_preproc_fn)
-        weigths_path = os.path.join(self.model_dir, self.path_weights_fn)
         
         # Save the pre-processors
         with open(preproc_path,'wb') as fp:
             pickle.dump([self.pl_scaler, self.cond_scaler, self.dly_scale,\
                          self.pl_max, self.npaths_max, self.nlatent,\
                          self.nunits_enc, self.nunits_dec], fp)
+    
+    def save_path_model(self):
+        """
+        Saves model data to files
+
+        """        
+        
+        # Create the file paths
+        if not os.path.exists(self.model_dir):
+            os.makedirs(self.model_dir)
+        weigths_path = os.path.join(self.model_dir, self.path_weights_fn)
+
             
         # Save the VAE weights
         self.path_mod.vae.save_weights(weigths_path, save_format='h5')

@@ -92,6 +92,10 @@ checkpoint_period = args.checkpoint_period
 data_dir = args.data_dir
 ds_name = args.ds_name
 
+nepochs_link = 5
+nepochs_path = 5
+model_dir = '../../models/temp'
+
 
 # Overwrite parameters based on batch index
 # This is used in HPC training with multiple batches
@@ -100,7 +104,7 @@ nlatent_batch  = [20,30]
 nunits_enc_batch = [[200,80], [300,100]]
 nunits_dec_batch = [[80,200], [100,300]]
 ds_name_batch = ['uav_lon_tok', 'uav_beijing', 'uav_boston', 'uav_moscow']
-dir_suffix = ['nl20_nh2_20201105', 'nl30_nh2_20201105']    
+dir_suffix = ['nl20_nh2_20201106', 'nl30_nh2_20201106']    
 if batch_ind >= 0:
     nparam = len(nlatent_batch)
     ids = batch_ind // nparam
@@ -167,10 +171,7 @@ if fit_path:
     chan_mod.fit_path_mod(train_data, test_data, lr=lr_path,\
                           epochs=nepochs_path,\
                           checkpoint_period=checkpoint_period)
-    
         
-    # Save the path loss model
-    chan_mod.save_path_model()
 
 
 
