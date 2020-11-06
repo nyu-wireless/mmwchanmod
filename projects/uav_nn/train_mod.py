@@ -92,10 +92,6 @@ checkpoint_period = args.checkpoint_period
 data_dir = args.data_dir
 ds_name = args.ds_name
 
-nepochs_link = 5
-nepochs_path = 5
-model_dir = '../../models/temp'
-
 
 # Overwrite parameters based on batch index
 # This is used in HPC training with multiple batches
