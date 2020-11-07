@@ -111,13 +111,16 @@ if batch_ind >= 0:
     nlatent = nlatent_batch[iparam]
     nunits_enc = nunits_enc_batch[iparam]
     nunits_dec = nunits_dec_batch[iparam]
+    
+# Print parameters
+if batch_ind >= 0:
     print('batch_ind=%d' % batch_ind)
-    print('model_dir= %s' % model_dir)
-    print('nunits_enc=%s' % str(nunits_enc))
-    print('nunits_dec=%s' % str(nunits_dec))
-    #print('lr=%12.4e' % lr_path)
-    print('nlatent=%d' % nlatent)
-    print('data_fn=%s' % ds_name)
+print('model_dir= %s' % model_dir)
+print('nunits_enc=%s' % str(nunits_enc))
+print('nunits_dec=%s' % str(nunits_dec))
+print('lr_path=%12.4e' % lr_path)
+print('nlatent=%d' % nlatent)
+print('data_fn=%s' % ds_name)
     
 """
 Build the model
