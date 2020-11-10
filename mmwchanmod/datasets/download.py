@@ -1,5 +1,5 @@
 """
-download.py:  Downloads files
+download.py:  Downloads datasets and pre-trained models
 
 Programs are taken from  StackOverflow answer: https://stackoverflow.com/a/39225039
 """
@@ -12,7 +12,9 @@ import argparse
 from tqdm import tqdm
 import pickle
 import numpy as np
+import zipfile
 
+from mmwchanmod.learn.models import ChanMod
 
 def download_file_from_gdrive(gdrive_id, destination):
     URL = "https://docs.google.com/uc?export=download"
@@ -59,12 +61,19 @@ ds_gdrive_ids = {\
     'uav_moscow' : '1dKZD9klTUzKJOGkV9ib01QE8y-qO3xL3',\
     'uav_beijing': '145HEyB_oHCMZIb3rYE-2iQpHlLdg5PPn'
 }
-
+    
+model_gdrive_ids = {\
+    'uav_lon_tok' : '1-mMqqxBp0GlvMnFNwebLiQdpcWkVEpHO',\
+    'uav_boston' : '1YHzKRH03F44Mf_wZFK5QfzgqkYLd_4rG',\
+    'uav_moscow' : '154q4luLJByWfIys6F3_44wAuKWnbkubR',\
+    'uav_beijing': '1l0M74VCaSgniX9ilQqeJ7v3xxE4UlRjT'        
+}
+        
 
 def list_datasets(src='remote', prt=True):
     """
     Lists all datasets available
-    
+     
     Parameters
     ----------
     prt:  Boolean, default: True
@@ -101,6 +110,46 @@ def list_datasets(src='remote', prt=True):
        for name in ds_names:
            print('  ', name)        
     return ds_names
+
+def list_models(src='remote', prt=True):
+    """
+    Lists all trained models available
+     
+    Parameters
+    ----------
+    prt:  Boolean, default: True
+        Prints the datasets
+    src : {'remote', 'local'}:
+        'remote' indicates to list files on server.
+        'local' indicates to list files on local 
+
+    Returns
+    -------
+    mod_names:  list of strings
+        List of all available dataset names
+    """
+    
+    if src == 'remote':
+        mod_names = list(model_gdrive_ids.keys())
+              
+    elif src == 'local':
+        mod_dir = os.path.join(os.path.dirname(__file__),'..','..','models')  
+        mod_dir = os.path.abspath(mod_dir)
+        mod_names = []
+        if not os.path.isdir(mod_dir):
+            print('No local data directory %s' % mod_dir)            
+        else:
+            # Add all directories
+            for f in  os.scandir(mod_dir):
+                if os.path.isdir(f):
+                    mod_names.append(f.name)
+            
+    # Print the list
+    if prt:
+       print('Available datasets:')
+       for name in mod_names:
+           print('  ', name)        
+    return mod_names
     
                   
 def get_dataset(ds_name, src='remote', overwrite=False, return_data=True):
@@ -250,7 +299,86 @@ def concat_datasets(ds_names, out_name='concat'):
     with open(data_path, 'wb') as fp:
         pickle.dump([cfg, train_data, test_data], fp)  
     print('Created concatanated dataset: %s' % data_fn)
-                        
+    
+def load_model(mod_name, src='remote', overwrite=False,\
+               return_mod=True):
+    """
+    Loads a pre-trained model
+
+    Parameters
+    ----------
+    mod_name : string
+        Remote model name to be downloaded. 
+    src : {'remote', 'local'}:
+        'remote' indicates to download from server.  
+        'local' indicates to download from local directory-
+    overwrite : boolean, default: False
+        Overwrites dataset if already downloaded
+    return_mod : boolean, default: True
+        Returns the channel model.  If False, the model directory
+        is downloaded only.
+        
+        
+    Returns
+    -------
+    chan_mod:  ChanMod
+        pre-trained channel model
+    """    
+        
+    # Create the local data directory if needed    
+    mod_root = os.path.join(os.path.dirname(__file__),'..','..','models')
+    mod_root = os.path.abspath(mod_root)
+    if not os.path.exists(mod_root):
+        os.mkdir(mod_root)
+        print('Creating directory %s' % mod_root)
+        
+    # Check if model directory exists
+    mod_dir = os.path.join(mod_root, mod_name)
+           
+    # Download from the server, if needed
+    if (src == 'remote'):
+        if (not os.path.exists(mod_dir)) or overwrite:
+                
+            # Download the zip file
+            mod_zip_fn = mod_name + '.zip'
+            mod_zip_path = os.path.join(mod_root, mod_zip_fn) 
+    
+            
+            if not (mod_name in model_gdrive_ids):
+                raise ValueError('Unknown model %s' % mod_name)
+                
+            # Get gdrive ID
+            gdrive_id = model_gdrive_ids[mod_name]
+            
+            # Download the file
+            download_file_from_gdrive(gdrive_id, mod_zip_path)
+            
+            # Then, unzip the file
+            zip_ref = zipfile.ZipFile(mod_zip_path, 'r')
+            zip_ref.extractall(mod_root)
+            zip_ref.close()
+            print('Model %s unzipped' % mod_dir)        
+                    
+    elif src != 'local':
+        raise ValueError('src must be local or remote')
+        
+    # Check if model directory exists
+    if not os.path.exists(mod_dir):
+        raise ValueError('Cannot find model %s' % mod_dir)
+     
+    # Exit if model does not need to be loaded        
+    if not return_mod:
+        return
+        
+    # Create the model
+    chan_mod = ChanMod(model_dir=mod_dir)
+    
+    # Load the configuration and link classifier model
+    chan_mod.load_config()
+    chan_mod.load_link_model()
+    chan_mod.load_path_model()        
+
+    return chan_mod                        
     
             
     

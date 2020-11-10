@@ -18,6 +18,7 @@ from mmwchanmod.common.spherical import spherical_add_sub, cart_to_sph
 from mmwchanmod.common.constants import PhyConst, AngleFormat
 from mmwchanmod.common.constants import LinkState, DataConfig 
 from mmwchanmod.learn.datastats import  data_to_mpchan 
+from mmwchanmod.learn.preproc_param import preproc_to_param, param_to_preproc
     
 
 class CondVAE(object):
@@ -276,6 +277,9 @@ class ChanMod(object):
         self.link_preproc_fn='link_preproc.p'
         self.path_weights_fn='path_weights.h5'
         self.path_preproc_fn='path_preproc.p'
+        
+        # Version number for the pre-processing file format
+        self.version = 0
                 
         
     def save_config(self):
@@ -507,11 +511,17 @@ class ChanMod(object):
             os.makedirs(self.model_dir)
         preproc_path = os.path.join(self.model_dir, self.link_preproc_fn)
         weigths_path = os.path.join(self.model_dir, self.link_weights_fn)
-        
+
+        # Serializing sklearn objects may not be valid if the de-serializing
+        # program has a different sklearn version.  So, we store parameters
+        # of the pre-processors instead
+        link_param = preproc_to_param(self.link_scaler, 'StandardScaler')
+        rx_type_param = preproc_to_param(self.rx_type_enc, 'OneHotEncoder')
         
         # Save the pre-processors
         with open(preproc_path,'wb') as fp:
-            pickle.dump([self.link_scaler, self.nunits_link, self.rx_type_enc], fp)
+            pickle.dump([self.version, link_param, self.nunits_link,\
+                         rx_type_param], fp)
             
         # Save the VAE weights
         self.link_mod.save_weights(weigths_path, save_format='h5')
@@ -524,13 +534,15 @@ class ChanMod(object):
         # Create the file paths
         preproc_path = os.path.join(self.model_dir, self.link_preproc_fn)
         weigths_path = os.path.join(self.model_dir, self.link_weights_fn)
-
+                
         # Load the pre-processors and model config
         with open(preproc_path,'rb') as fp:
-            self.link_scaler, self.nunits_link, self.rx_type_enc = pickle.load(fp)
+            ver, link_scaler_param, self.nunits_link, rx_type_param \
+                = pickle.load(fp)
             
-        # Update version
-        self.link_scaler = new_version_standard_scaler(self.link_scaler)
+       # Construct the pre-processors from the saved parameters
+        self.link_scaler = param_to_preproc(link_scaler_param, 'StandardScaler')
+        self.rx_type_enc = param_to_preproc(rx_type_param, 'OneHotEncoder')
             
         # Build the link state predictor
         self.build_link_mod()
@@ -1159,9 +1171,15 @@ class ChanMod(object):
             os.makedirs(self.model_dir)
         preproc_path = os.path.join(self.model_dir, self.path_preproc_fn)
         
+        # Serializing sklearn objects may not be valid if the de-serializing
+        # program has a different sklearn version.  So, we store parameters
+        # of the pre-processors instead
+        pl_param = preproc_to_param(self.pl_scaler, 'MinMaxScaler')
+        cond_param = preproc_to_param(self.cond_scaler, 'StandardScaler')
+        
         # Save the pre-processors
         with open(preproc_path,'wb') as fp:
-            pickle.dump([self.pl_scaler, self.cond_scaler, self.dly_scale,\
+            pickle.dump([self.version, pl_param, cond_param, self.dly_scale,\
                          self.pl_max, self.npaths_max, self.nlatent,\
                          self.nunits_enc, self.nunits_dec], fp)
     
@@ -1180,23 +1198,33 @@ class ChanMod(object):
         # Save the VAE weights
         self.path_mod.vae.save_weights(weigths_path, save_format='h5')
         
-    def load_path_model(self):
+    def load_path_model(self, ckpt=None):
         """
         Load model data from files
+        
+        Parameters
+        ----------
+        ckpt : None or int
+            If integer, loads a checkpoint file with the epoch number.
 
         """
         # Create the file paths
         preproc_path = os.path.join(self.model_dir, self.path_preproc_fn)
-        weights_path = os.path.join(self.model_dir, self.path_weights_fn)
+        if ckpt is None:
+            fn = self.path_weights_fn
+        else:
+            fn = ('path_weights.%d.h5' % ckpt)
+        weights_path = os.path.join(self.model_dir, fn)
         
         # Load the pre-processors
         with open(preproc_path,'rb') as fp:
-            self.pl_scaler, self.cond_scaler, self.dly_scale, self.pl_max,\
+            ver, pl_param, cond_param, self.dly_scale, self.pl_max,\
                 self.npaths_max, self.nlatent, self.nunits_enc,\
                 self.nunits_dec = pickle.load(fp)
                 
-        # Update the version
-        self.cond_scaler = new_version_standard_scaler(self.cond_scaler)
+        # Re-constructor the pre-processors
+        self.pl_scaler = param_to_preproc(pl_param, 'MinMaxScaler')
+        self.cond_scaler = param_to_preproc(cond_param, 'StandardScaler')                
             
         # Build the path model
         self.build_path_mod()
@@ -1229,43 +1257,7 @@ def set_initialization(mod, layer_names, kernel_stddev=1.0, bias_stddev=1.0):
                              (nout,)).astype(np.float32)
         layer.set_weights([W,b])
         
-def new_version_standard_scaler(scaler):
-    """
-    Creates a version of a StandardScaler object with the current
-    sklearn version.  This is used when deserializing (i.e. pickle.load) 
-    a scaler from an old version.
 
-    Parameters
-    ----------
-    scaler : StandardScaler object from an old version
-        Old version of the scaler.  Must have `mean_` and `scale_`
-        attributes.
-
-    Returns
-    -------
-    scaler_new : StandardScaler object
-        New version
-    """
-    
-    # Get mean and variance for the data
-    mean = scaler.mean_
-    scale = scaler.scale_
-    
-    
-    # Create ficticious data with that mean and scale
-    nsamp = 100
-    u = np.linspace(-1,1,nsamp)
-    u = u - np.mean(u)
-    u = u / np.std(u)    
-    X = mean[None,:] + u[:,None]*scale[None,:]
-    
-    
-    # Create a new scaler and fit it with the fake data to get 
-    # the same parameters as the old scaler
-    scaler_new =  sklearn.preprocessing.StandardScaler()
-    scaler_new.fit(X)
-            
-    return scaler_new
 
     
 
