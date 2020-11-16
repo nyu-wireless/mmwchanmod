@@ -32,7 +32,7 @@ class ArrayBase(object):
         self.elem_pos = elem_pos
         self.fc = fc
         
-    def sv(self,phi,theta,include_elem=True):
+    def sv(self,phi,theta,include_elem=True,return_elem_gain=False):
         """
         Gets the steering vectors for the array
 
@@ -44,12 +44,15 @@ class ArrayBase(object):
             elevation angle in degrees
         include_elem : boolean
             Indicate if the element pattern is to be included
+        return_elem_gain : boolean, default=False
+            Indicates if the element gain is to be returned
 
         Returns
         -------
         usv:  (n,nant) array
             the steering vectors for each angle
-
+        elem_gain:  (n,) array
+            element gains in dBi.  Returned only if return_elem_gain==True
         """
         # Convert scalar values to vector
         if np.isscalar(phi):
@@ -71,10 +74,17 @@ class ArrayBase(object):
         # Add element pattern if requested.
         # Note the element gain is converted to linear scale
         if include_elem:
-            elem_gain = 10**(0.05*self.elem.response(phi,theta))
-            usv = usv * elem_gain[:,None]
+            elem_gain = self.elem.response(phi,theta)
+            elem_gain_lin = 10**(0.05*elem_gain)
+            usv = usv * elem_gain_lin[:,None]
+        else:
+            n = len(phi)
+            elem_gain = np.zeros(n)
             
-        return usv
+        if return_elem_gain:
+            return usv, elem_gain
+        else:
+            return usv
     
     def conj_bf(self,phi,theta):
         """
@@ -222,7 +232,7 @@ class RotatedArray(ArrayBase):
         
         
         
-    def sv(self,phi,theta,include_elem=True):
+    def sv(self,phi,theta,**kwargs):
         """
         Gets the steering vectors for the array
 
@@ -230,14 +240,13 @@ class RotatedArray(ArrayBase):
         ----------
         phi, theta : array of floats
             azimuth and elevation angles in the global coordinate system
-        include_elem : boolean
-            Indicate if the element pattern is to be included
+        **kwargs : dictionary
+            Other arguments in ArrayBase.sv()
 
         Returns
         -------
-        usv:  (n,nant) array
-            the steering vectors for each angle
-
+        See ArrayBase.sv()
+        
         """
         # Convert scalar values to vector
         if np.isscalar(phi):
@@ -249,9 +258,9 @@ class RotatedArray(ArrayBase):
         phi1, theta1 = self.global_to_local(phi,theta)        
         
         # Call the array class method with the rotated angles
-        usv = self.arr.sv(phi1,theta1,include_elem)
+        out = self.arr.sv(phi1,theta1,**kwargs)
                       
-        return usv
+        return out
     
     def conj_bf(self,phi,theta):
         """

@@ -28,7 +28,7 @@ class MPChan(object):
         # Parameters for each ray
         self.pl  = np.zeros(0, dtype=np.float32)
         self.dly = np.zeros(0, dtype=np.float32)
-        self.angle = np.zeros((0,MPChan.nangle), dtype=np.float32)
+        self.ang = np.zeros((0,MPChan.nangle), dtype=np.float32)
         self.link_state = LinkState.no_link        
         
     def comp_omni_path_loss(self):
@@ -108,6 +108,93 @@ class MPChan(object):
             dly_rms = np.sqrt( w.dot((self.dly-dly_mean)**2) )
                     
         return dly_rms
+    
+def dir_path_loss(tx_arr, rx_arr, chan, return_elem_gain=True,\
+                       return_bf_gain=True):
+    """
+    Computes the directional path loss between RX and TX arrays
+
+    Parameters
+    ----------
+    tx_arr, rx_arr : ArrayBase object
+        TX and RX arrays
+    chan : MPChan object
+        Multi-path channel object
+    return_elem_gain : boolean, default=True
+        Returns the TX and RX element gains
+    return_bf_gain : boolean, default=True
+        Returns the TX and RX beamforming gains
+
+    Returns
+    -------
+    pl_eff:  float
+        Effective path loss with BF gain 
+    tx_elem_gain, rx_elem_gain:  (n,) arrays
+        TX and RX element gains on each path in the channel
+    tx_bf_gain, rx_nf_gain:  (n,) arrays
+        TX and RX BF gains on each path in the channel
+    
+    """
+    
+    if chan.link_state == LinkState.no_link:
+        pl_eff = MPChan.large_pl
+        tx_elem_gain = np.array(0)
+        rx_elem_gain = np.array(0)
+        tx_bf = np.array(0)
+        rx_bf = np.array(0)
+        
+    else:
+    
+        # Get the angles of the path
+        # Note that we have to convert from inclination to elevation angle
+        aod_theta = 90 - chan.ang[:,MPChan.aod_theta_ind]
+        aod_phi = chan.ang[:,MPChan.aod_phi_ind]
+        aoa_theta = 90 - chan.ang[:,MPChan.aoa_theta_ind]
+        aoa_phi = chan.ang[:,MPChan.aoa_phi_ind]
+        
+        tx_sv, tx_elem_gain = tx_arr.sv(aod_phi, aod_theta, return_elem_gain=True)
+        rx_sv, rx_elem_gain = rx_arr.sv(aoa_phi, aoa_theta, return_elem_gain=True)
+        
+        # Compute path loss with element gains
+        pl_elem = chan.pl - tx_elem_gain - rx_elem_gain
+        
+        # Select the path with the lowest path loss
+        im = np.argmin(pl_elem)
+        
+        # Beamform in that direction
+        wtx = np.conj(tx_sv[im,:])
+        wtx = wtx / np.sqrt(np.sum(np.abs(wtx)**2))
+        wrx = np.conj(rx_sv[im,:])
+        wrx = wrx / np.sqrt(np.sum(np.abs(wrx)**2))
+        
+        # Compute the gain with both the element and BF gain
+        tx_bf = 20*np.log10(np.abs(tx_sv.dot(wtx)))
+        rx_bf = 20*np.log10(np.abs(rx_sv.dot(wrx)))
+        pl_bf = chan.pl - tx_bf - rx_bf
+        
+        # Subtract the TX and RX element gains
+        tx_bf -= tx_elem_gain
+        rx_bf -= rx_elem_gain
+        
+        # Compute effective path loss
+        pl_min = np.min(pl_bf)
+        pl_lin = 10**(-0.1*(pl_bf-pl_min))
+        pl_eff = pl_min-10*np.log10(np.sum(pl_lin) )
+    
+    # Get outputs
+    if not (return_bf_gain or return_elem_gain):
+        return pl_eff
+    else:
+        out =[pl_eff]
+        if return_elem_gain:
+            out.append(tx_elem_gain)
+            out.append(rx_elem_gain)
+        if return_bf_gain:
+            out.append(tx_bf)
+            out.append(rx_bf)
+        return out
+        
+    
     
         
         
