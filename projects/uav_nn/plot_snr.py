@@ -18,9 +18,9 @@ if not path in sys.path:
     sys.path.append(path)
     
 from mmwchanmod.datasets.download import load_model 
-from mmwchanmod.sim.antenna import Elem3GPP, Elem3GPPMultiSector
+from mmwchanmod.sim.antenna import Elem3GPP
 from mmwchanmod.sim.array import URA, RotatedArray
-from mmwchanmod.sim.chanmod import MPChan, dir_path_loss
+from mmwchanmod.sim.chanmod import dir_path_loss
     
 """
 Parse arguments from command line
@@ -31,7 +31,7 @@ parser.add_argument(\
     default='plots', help='directory for the output plots')    
 parser.add_argument(\
     '--plot_fn',action='store',\
-    default='angle_dist.png', help='plot file name')        
+    default='snr_coverage.png', help='plot file name')        
 parser.add_argument(\
     '--mod_name',action='store',\
     default='uav_lon_tok', help='model to load') 
@@ -45,17 +45,14 @@ mod_name = args.mod_name
 # Paramters
 bw = 400e6   # Bandwidth in Hz
 nf = 6  # Noise figure in dB
-kT = -174   # Thermal noise in dB/Hz
+kT = -174   # Thermal noise in dBm/Hz
 tx_pow = 23  # TX power in dBm
 npts = 100    # number of points for each (x,z) bin
-aer_height=30  # Height of the aerial cell
-downtilt = 10  # downtilt on terrestrial cells
-fc = 28e9
+aer_height=30  # Height of the aerial cell in meters
+downtilt = 10  # downtilt on terrestrial cells in degrees
+fc = 28e9  # carrier frequency in Hz
 nant_gnb = np.array([8,8])  # gNB array size
 nant_ue = np.array([4,4])   # UE/UAV array size
-
-
-plot_fn = 'snr_dist.png'
 
 """
 Create the arrays
@@ -79,12 +76,16 @@ nz = 20
 xlim = np.array([0,500])
 zlim = np.array([0,130])
 
+"""
+Load the pre-trained model
+"""
     
 # Construct and load the channel model object
+print('Loading pre-trained model %s' % mod_name)
 K.clear_session()
 chan_mod = load_model(mod_name)
     
-    
+# Get types of RX     
 rx_types = chan_mod.rx_types
 nplot = len(chan_mod.rx_types)
 
@@ -99,7 +100,8 @@ for iplot, rx_type0 in enumerate(rx_types):
 
     
     # Print cell type
-    print('Simulating %s cell' % rx_type0)
+    print('')
+    print('Simulating RX type: %s' % rx_type0)
     
     # Set the limits and x and z values to test
     dx = np.linspace(xlim[0],xlim[1],nx)        
@@ -158,7 +160,7 @@ for iplot, rx_type0 in enumerate(rx_types):
     plt.subplot(1,nplot,iplot+1)
     plt.imshow(snr_med[:,:,iplot],\
                extent=[np.min(xlim),np.max(xlim),np.min(zlim),np.max(zlim)],\
-               aspect='auto', vmin=-20, vmax=60)   
+               aspect='auto', vmin=-20, vmax=40)   
         
     # Add horizontal line indicating location of aerial cell
     if (rx_type0 == 'Aerial'):
