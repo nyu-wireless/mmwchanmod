@@ -19,8 +19,8 @@ if not path in sys.path:
     
 from mmwchanmod.datasets.download import load_model 
 from mmwchanmod.sim.antenna import Elem3GPP
-from mmwchanmod.sim.array import URA, RotatedArray
-from mmwchanmod.sim.chanmod import dir_path_loss
+from mmwchanmod.sim.array import URA, RotatedArray, multi_sect_array
+from mmwchanmod.sim.chanmod import dir_path_loss, dir_path_loss_multi_sect
     
 """
 Parse arguments from command line
@@ -48,19 +48,27 @@ nf = 6  # Noise figure in dB
 kT = -174   # Thermal noise in dBm/Hz
 tx_pow = 23  # TX power in dBm
 npts = 100    # number of points for each (x,z) bin
-aer_height=30  # Height of the aerial cell in meters
+aer_height=30  # Height of the aerial cell in meterss
 downtilt = 10  # downtilt on terrestrial cells in degrees
 fc = 28e9  # carrier frequency in Hz
 nant_gnb = np.array([8,8])  # gNB array size
 nant_ue = np.array([4,4])   # UE/UAV array size
+nsect_terr = 3  # number of sectors for terrestrial gNBs
 
 """
 Create the arrays
 """
-# gNB cell array.  This will be rotated depending on whether
-# it is aerial or terrestrial 
-elem_gnb = Elem3GPP(thetabw=90, phibw=80)
+# Terrestrial gNB.
+# We downtilt the array and then replicate it over three sectors
+elem_gnb = Elem3GPP(thetabw=60, phibw=80)
 arr_gnb0 = URA(elem=elem_gnb, nant=nant_gnb, fc=fc)
+arr_gnb1 = RotatedArray(arr_gnb0,theta0=-downtilt)
+arr_gnb_list_t = multi_sect_array(\
+    arr_gnb1, sect_type='azimuth', nsect=nsect_terr)
+
+# Aerial gNB
+# We direct the cell to point upwards.  It is single sector
+arr_gnb_a = RotatedArray(arr_gnb0,theta0=90)
 
 
 # UE array.  Array is pointing down.
@@ -109,22 +117,17 @@ for iplot, rx_type0 in enumerate(rx_types):
     if rx_type0 == 'Aerial':
         dz = dz - aer_height
     
-    # Create the gNB array.
-    # For aerial cells, point them upwards (theta0 = 90)
-    # For terrestrial cells, point them with the downtilt
-    if rx_type0 == 'Aerial':
-        arr_gnb = RotatedArray(arr_gnb0,theta0=90)
-    else:
-        arr_gnb = RotatedArray(arr_gnb0,theta0=-downtilt)
-        
+    
     # Convert to meshgrid
     dxmat, dzmat = np.meshgrid(dx,dz)
     
-    # Create the condition vectors
-    dvec = np.zeros((nx*nz,3))
-    dvec[:,0] = dxmat.ravel()
-    dvec[:,2] = dzmat.ravel()
-    rx_type_vec = np.tile(iplot, (nx*nz,))
+    # Create the condition 
+    ns = nx*nz
+    phi = np.random.uniform(0,2*np.pi,ns)
+    dx = dxmat.ravel()
+    dz = dzmat.ravel()
+    dvec = np.column_stack((dx*np.cos(phi), dx*np.sin(phi), dz))
+    rx_type_vec = np.tile(iplot, (ns,))
         
         
     # Loop over multiple trials
@@ -138,9 +141,12 @@ for iplot, rx_type0 in enumerate(rx_types):
         n = len(chan_list)
         pl_gain = np.zeros(n)        
         for j, c in enumerate(chan_list):            
-            pl_gain[j] = dir_path_loss(arr_gnb, arr_ue, c)[0]
-        
-       
+            if rx_type0 == 'Aerial':
+                pl_gain[j] = dir_path_loss(arr_gnb_a, arr_ue, c)[0]
+            else:
+                pl_gain[j] = dir_path_loss_multi_sect(\
+                    arr_gnb_list_t, [arr_ue], c)[0]
+                                                   
         # Compute the effective SNR
         snri = tx_pow - pl_gain - kT - nf - 10*np.log10(bw)
     

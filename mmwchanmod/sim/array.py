@@ -288,7 +288,46 @@ class RotatedArray(ArrayBase):
         return w
         
     
-            
+def multi_sect_array(arr0, sect_type='azimuth', nsect=3):
+    """
+    Creates a list of arrays for multi-sector
+
+    Parameters
+    ----------
+    arr0 : ArrayBase object
+        Base array
+    sect_type : {'azimuth', 'elevation'}, default='azimuth'
+        Sectorization type.  
+    nsect : int, default=3
+        Number of sectors.
+
+
+    Returns
+    -------
+        arr_list : array of ArrayBase
+            Array of rotated arrays
+
+    """
+    
+    if sect_type == 'azimuth':
+        phi0 = np.linspace(0,(nsect-1)/nsect, nsect)*360
+        theta0 = np.zeros(nsect)
+    elif sect_type == 'elevation':
+        theta0 = (np.linspace(1/(nsect+1),nsect/(nsect+1), nsect)*2-1)*90
+        phi0 = np.zeros(nsect)
+    else:
+        raise ValueError('Unknown sectorization type %s' % sect_type)
+        
+    # Create list of arrays
+    arr_list = []
+    for p, t in zip(phi0, theta0):
+        arr = RotatedArray(arr0, phi0=p, theta0=t)
+        arr_list.append(arr)
+        
+    return arr_list
+    
+        
+        
         
             
         
