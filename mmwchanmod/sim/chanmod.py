@@ -139,7 +139,7 @@ def dir_path_loss(tx_arr, rx_arr, chan, return_elem_gain=True,\
         # account the division of power across the TX antennas
         tx_bf = 20*np.log10(np.abs(tx_sv.dot(wtx)))
         rx_bf = 20*np.log10(np.abs(rx_sv.dot(wrx)))
-        pl_bf = chan.pl - tx_bf - rx_bf + 10*np.log10(nanttx)
+        pl_bf = chan.pl - tx_bf - rx_bf
         
         # Subtract the TX and RX element gains
         tx_bf -= tx_elem_gain
@@ -257,7 +257,7 @@ def dir_path_loss_multi_sect(tx_arr_list, rx_arr_list, chan, return_elem_gain=Tr
         # account the division of power across the TX antennas
         tx_bf = 20*np.log10(np.abs(tx_sv.dot(wtx)))
         rx_bf = 20*np.log10(np.abs(rx_sv.dot(wrx)))
-        pl_bf = chan.pl - tx_bf - rx_bf + 10*np.log10(nanttx)
+        pl_bf = chan.pl - tx_bf - rx_bf 
         
         # Subtract the TX and RX element gains
         tx_bf -= tx_elem_gain

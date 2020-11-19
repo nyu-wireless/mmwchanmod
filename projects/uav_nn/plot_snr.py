@@ -1,7 +1,5 @@
 """
 plot_snr.py:  Plots the SNR distribution in a single cell environment.
-
-Right now this considers only a single sector.
 """
 import numpy as np
 import matplotlib.pyplot as plt
@@ -63,8 +61,9 @@ Create the arrays
 elem_gnb = Elem3GPP(thetabw=60, phibw=80)
 arr_gnb0 = URA(elem=elem_gnb, nant=nant_gnb, fc=fc)
 arr_gnb1 = RotatedArray(arr_gnb0,theta0=-downtilt)
+
 arr_gnb_list_t = multi_sect_array(\
-    arr_gnb1, sect_type='azimuth', nsect=nsect_terr)
+        arr_gnb1, sect_type='azimuth', nsect=nsect_terr)
 
 # Aerial gNB
 # We direct the cell to point upwards.  It is single sector
@@ -166,7 +165,7 @@ for iplot, rx_type0 in enumerate(rx_types):
     plt.subplot(1,nplot,iplot+1)
     plt.imshow(snr_med[:,:,iplot],\
                extent=[np.min(xlim),np.max(xlim),np.min(zlim),np.max(zlim)],\
-               aspect='auto', vmin=-20, vmax=40)   
+               aspect='auto', vmin=-20, vmax=60)   
         
     # Add horizontal line indicating location of aerial cell
     if (rx_type0 == 'Aerial'):

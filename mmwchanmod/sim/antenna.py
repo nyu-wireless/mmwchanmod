@@ -323,58 +323,7 @@ class Elem3GPP(ElemBase):
         # Adjust the max gain
         self.gain_max = self.gain_max - gain_mean
         
-class Elem3GPPMultiSector(object):
-    """
-    Element gain for a multi-sector site .
-    
-    Finds the max gain along multiple sectors arranged along
-    the azimuth plane
-    """   
-    def __init__(self, nsect=3, phi0=0, theta0=0, phibw=65, thetabw=65):
-        """
-        Constructor
 
-        Parameters
-        ----------
-        nsect : int
-            Number of sectors
-        phi0, theta0 : scalars
-            Center azimuth and elevation angle in degrees.
-            The value `phi0` is the azimuth angle for sector 0.
-        phibw, thetabw : scalars
-            Azimuth and elevation half-power beamwidth in degrees
-
-        """     
-        
-        # Create the elements
-        self.elem = []
-        for i in range(nsect):
-            # Angle of the sector
-            phi_sect = phi0 + i*360/(nsect+1)
-            elem_sect = Elem3GPP(phi_sect,theta0,phibw,thetabw)
-            self.elem.append(elem_sect)
-            
-    def response(self,phi,theta):
-        """
-        Computes antenna gain for angles.  This is found from the
-        maximum gain across the sectors
-        
-        Parameters
-        ----------
-        phi:  array
-            Azimuth angles in degrees
-        theta: array
-            Elevation angles in degrees
-        """        
-        nsect = len(self.elem)
-        for i in range(nsect):
-            gaini = self.elem[0].response(phi, theta)
-            if i == 0:
-                gain = gaini
-            else:
-                gain = np.maximum(gain, gaini)
-        return gain
-      
         
 
         
