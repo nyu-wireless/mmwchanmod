@@ -119,8 +119,6 @@ def dir_path_loss(tx_arr, rx_arr, chan, return_elem_gain=True,\
         tx_sv, tx_elem_gain = tx_arr.sv(aod_phi, aod_theta, return_elem_gain=True)
         rx_sv, rx_elem_gain = rx_arr.sv(aoa_phi, aoa_theta, return_elem_gain=True)
         
-        # Get the number of TX elements
-        nanttx = tx_sv.shape[1]
         
         # Compute path loss with element gains
         pl_elem = chan.pl - tx_elem_gain - rx_elem_gain
@@ -240,21 +238,14 @@ def dir_path_loss_multi_sect(tx_arr_list, rx_arr_list, chan, return_elem_gain=Tr
                     rx_elem_gain = rx_elem_gaini
                     ind_rx = irx
                     ind_tx = itx
-                
-        
-        # Get the number of TX elements
-        nanttx = tx_sv.shape[1]
-        
-               
+                               
         # Beamform in that direction
         wtx = np.conj(tx_sv[im,:])
         wtx = wtx / np.sqrt(np.sum(np.abs(wtx)**2))
         wrx = np.conj(rx_sv[im,:])
         wrx = wrx / np.sqrt(np.sum(np.abs(wrx)**2))
         
-        # Compute the gain with both the element and BF gain
-        # Note that we add the factor 10*np.log10(nanttx) to 
-        # account the division of power across the TX antennas
+        # Compute the gain with both the element and BF gain        
         tx_bf = 20*np.log10(np.abs(tx_sv.dot(wtx)))
         rx_bf = 20*np.log10(np.abs(rx_sv.dot(wrx)))
         pl_bf = chan.pl - tx_bf - rx_bf 

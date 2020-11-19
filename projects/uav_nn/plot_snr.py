@@ -47,41 +47,53 @@ kT = -174   # Thermal noise in dBm/Hz
 tx_pow = 23  # TX power in dBm
 npts = 100    # number of points for each (x,z) bin
 aer_height=30  # Height of the aerial cell in meterss
-downtilt = 10  # downtilt on terrestrial cells in degrees
+downtilt_t = 10  # downtilt on terrestrial cells in degrees
+
 fc = 28e9  # carrier frequency in Hz
 nant_gnb = np.array([8,8])  # gNB array size
 nant_ue = np.array([4,4])   # UE/UAV array size
-nsect_terr = 3  # number of sectors for terrestrial gNBs
+nsect_t = 3  # number of sectors for terrestrial gNBs
+nsect_a = 1  # number of sectors for aerial gNBs.  Set to 1 or 3
 
-"""
-Create the arrays
-"""
-# Terrestrial gNB.
-# We downtilt the array and then replicate it over three sectors
-elem_gnb = Elem3GPP(thetabw=60, phibw=80)
-arr_gnb0 = URA(elem=elem_gnb, nant=nant_gnb, fc=fc)
-arr_gnb1 = RotatedArray(arr_gnb0,theta0=-downtilt)
-
-arr_gnb_list_t = multi_sect_array(\
-        arr_gnb1, sect_type='azimuth', nsect=nsect_terr)
-
-# Aerial gNB
-# We direct the cell to point upwards.  It is single sector
-arr_gnb_a = RotatedArray(arr_gnb0,theta0=90)
-
-
-# UE array.  Array is pointing down.
-elem_ue = Elem3GPP(thetabw=90, phibw=80)
-arr_ue0 = URA(elem=elem_ue, nant=nant_ue, fc=fc)
-arr_ue = RotatedArray(arr_ue0,theta0=-90)
-
+# uptilt on the aerial gNBs
+if nsect_a == 1:
+    uptilt_a = 90    
+else:
+    uptilt_a = 45    
+    
 # Number of x and z bins
 nx = 40
 nz = 20
 
 # Range of x and z distances to test
 xlim = np.array([0,500])
-zlim = np.array([0,130])
+zlim = np.array([0,130])    
+
+"""
+Create the arrays
+"""
+# Terrestrial gNB.
+# We downtilt the array and then replicate it over three sectors
+elem_gnb = Elem3GPP(thetabw=82, phibw=82)
+arr_gnb0 = URA(elem=elem_gnb, nant=nant_gnb, fc=fc)
+arr_gnb1 = RotatedArray(arr_gnb0,theta0=-downtilt_t)
+
+arr_gnb_list_t = multi_sect_array(\
+        arr_gnb1, sect_type='azimuth', nsect=nsect_t)
+
+# Aerial gNB
+# First create a single uptilted array
+arr_gnb_a = RotatedArray(arr_gnb0,theta0=uptilt_a)
+
+# For multi-sector, create a list of arrays
+if (nsect_a > 1):
+    arr_gnb_list_a = multi_sect_array(\
+        arr_gnb_a, sect_type='azimuth', nsect=nsect_a)
+
+# UE array.  Array is pointing down.
+elem_ue = Elem3GPP(thetabw=82, phibw=82)
+arr_ue0 = URA(elem=elem_ue, nant=nant_ue, fc=fc)
+arr_ue = RotatedArray(arr_ue0,theta0=-90)
 
 """
 Load the pre-trained model
@@ -140,8 +152,11 @@ for iplot, rx_type0 in enumerate(rx_types):
         n = len(chan_list)
         pl_gain = np.zeros(n)        
         for j, c in enumerate(chan_list):            
-            if rx_type0 == 'Aerial':
+            if (rx_type0 == 'Aerial') and (nsect_a == 1):
                 pl_gain[j] = dir_path_loss(arr_gnb_a, arr_ue, c)[0]
+            elif (rx_type0 == 'Aerial'):
+                pl_gain[j] = dir_path_loss_multi_sect(\
+                    arr_gnb_list_a, [arr_ue], c)[0]
             else:
                 pl_gain[j] = dir_path_loss_multi_sect(\
                     arr_gnb_list_t, [arr_ue], c)[0]
