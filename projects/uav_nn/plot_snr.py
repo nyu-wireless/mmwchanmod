@@ -53,7 +53,7 @@ fc = 28e9  # carrier frequency in Hz
 nant_gnb = np.array([8,8])  # gNB array size
 nant_ue = np.array([4,4])   # UE/UAV array size
 nsect_t = 3  # number of sectors for terrestrial gNBs
-nsect_a = 1  # number of sectors for aerial gNBs.  Set to 1 or 3
+nsect_a = 3  # number of sectors for aerial gNBs.  Set to 1 or 3
 
 # uptilt on the aerial gNBs
 if nsect_a == 1:
@@ -76,19 +76,19 @@ Create the arrays
 # We downtilt the array and then replicate it over three sectors
 elem_gnb = Elem3GPP(thetabw=82, phibw=82)
 arr_gnb0 = URA(elem=elem_gnb, nant=nant_gnb, fc=fc)
-arr_gnb1 = RotatedArray(arr_gnb0,theta0=-downtilt_t)
 
 arr_gnb_list_t = multi_sect_array(\
-        arr_gnb1, sect_type='azimuth', nsect=nsect_t)
+        arr_gnb0, sect_type='azimuth', theta0=-downtilt_t, nsect=nsect_t)
 
 # Aerial gNB
-# First create a single uptilted array
-arr_gnb_a = RotatedArray(arr_gnb0,theta0=uptilt_a)
-
 # For multi-sector, create a list of arrays
+# For single sector, use a single uptilted array
 if (nsect_a > 1):
     arr_gnb_list_a = multi_sect_array(\
-        arr_gnb_a, sect_type='azimuth', nsect=nsect_a)
+        arr_gnb0, sect_type='azimuth', theta0=uptilt_a, nsect=nsect_a)
+else:
+    arr_gnb_a = RotatedArray(arr_gnb0,theta0=uptilt_a)
+        
 
 # UE array.  Array is pointing down.
 elem_ue = Elem3GPP(thetabw=82, phibw=82)

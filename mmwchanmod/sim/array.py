@@ -288,33 +288,43 @@ class RotatedArray(ArrayBase):
         return w
         
     
-def multi_sect_array(arr0, sect_type='azimuth', nsect=3):
+def multi_sect_array(arr0, sect_type='azimuth', theta0=0, phi0=0., nsect=3):
     """
-    Creates a list of arrays for multi-sector
-
+    Creates a list of arrays for multi-sector.
+    For sect_type == 'azimuth', the arrays are placed
+       at `nsect` equal angles in the azimuth plane with a common
+       elevation angle `theta0`.
+    For sect_type == 'elevatoin', the arrays are placed
+       at `nsect` equal angles in the elevation plane with a common
+       azimuth angle `phi0`.
+       
     Parameters
     ----------
     arr0 : ArrayBase object
         Base array
     sect_type : {'azimuth', 'elevation'}, default='azimuth'
         Sectorization type.  
+    theta0:  float, default = 0
+        Common elevation angle (used for 'azimuth' only.  )
+    phi0:  float, default = 0
+        Common horizontal angle (used for 'elevation' only.  )        
     nsect : int, default=3
         Number of sectors.
 
 
     Returns
     -------
-        arr_list : array of ArrayBase
-            Array of rotated arrays
+    arr_list : array of ArrayBase
+        Array of rotated arrays
 
     """
     
     if sect_type == 'azimuth':
         phi0 = np.linspace(0,(nsect-1)/nsect, nsect)*360
-        theta0 = np.zeros(nsect)
+        theta0 = np.tile(theta0, nsect)
     elif sect_type == 'elevation':
         theta0 = (np.linspace(1/(nsect+1),nsect/(nsect+1), nsect)*2-1)*90
-        phi0 = np.zeros(nsect)
+        phi0 = np.tile(phi0, nsect)
     else:
         raise ValueError('Unknown sectorization type %s' % sect_type)
         
